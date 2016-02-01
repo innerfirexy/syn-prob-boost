@@ -5,7 +5,6 @@
 import MySQLdb
 import sys
 import pickle
-from collections import OrderedDict
 
 from nltk.tree import *
 from nltk.probability import FreqDist
@@ -100,21 +99,60 @@ def write_rules2db():
     cur = conn.cursor()
         
     # create DEM_2spker_ruleFreq table
-    # sql = 'CREATE TABLE DEM_2spkr_ruleFreq (ruleID INT, ruleStr LONGTEXT, count INT, PRIMARY KEY(ruleID))'
-    # cur.execute(sql)
+    sql = 'CREATE TABLE DEM_2spkr_ruleFreq (ruleID INT, ruleStr LONGTEXT, count INT, PRIMARY KEY(ruleID))'
+    cur.execute(sql)
     
     # load the pickled obj
     dic = pickle.load(open('subrules.txt', 'rb'))
 
-    # order the dic
-    ord_dic = OrderedDict(sorted(dic.items(), key = lambda t: t[1], reverse = True))
-
     # write the key, val pairs to db
     rule_id = 1
-    for key, val in ord_dic.items():
+    for key, val in dic.items():
         sql = 'INSERT INTO DEM_2spkr_ruleFreq VALUES(%s, %s, %s)' 
         cur.execute(sql, (rule_id, key, val))
         rule_id += 1
+    # commit
+    conn.commit()
+
+
+# convert rule strings to rule IDs
+def rulestr2id():
+    # db conn
+    conn = db_conn('bnc')
+    cur = conn.cursor()
+
+    # select rule IDs
+    sql = 'SELECT ruleID, ruleStr FROM DEM_2spkr_ruleFreq'
+    cur.execute(sql)
+    data1 = cur.fetchall()
+    # construct a dict
+    dic = {}
+    for rule_id, rule_str in data1:
+        dic[rule_str] = rule_id
+
+    # select data2
+    sql = 'SELECT xmlID, divIndex, globalID, subRulesC5 FROM DEM_2spkr WHERE subRulesC5 IS NOT NULL'
+    cur.execute(sql)
+    data2 = cur.fetchall()
+
+    # convert each sentence
+    for i, d in enumerate(data2):
+        xml_id, div_idx, g_id, rules_str = d
+        rules = rules_str.split('~~~+~~~')
+        id_str = ','.join(map(str, [dic[r] for r in rules]))
+        # update
+        sql = 'UPDATE DEM_2spkr SET subRulesID = %s WHERE xmlID = %s AND divIndex = %s AND globalID = %s'
+        try:
+            cur.execute(sql, (id_str, xml_id, div_idx, g_id))
+        except Exception as e:
+            print('xmlID: {}, divIndex: {}, globalID: {}'.format(xml_id, div_idx, g_id))
+            print('id_str: {}'.format(id_str))
+            raise e
+        # print
+        if (i % 99 == 0 and i > 0) or i == len(data2)-1:
+            sys.stdout.write('\r{}/{} updated'.format(i+1, len(data2)))
+            sys.stdout.flush()
+
     # commit
     conn.commit()
     
@@ -127,4 +165,7 @@ if __name__ == '__main__':
     # extract_rules()
 
     # write the dict of rules to db
-    write_rules2db()
+    # write_rules2db()
+
+    # rule strings to IDs
+    rulestr2id()
