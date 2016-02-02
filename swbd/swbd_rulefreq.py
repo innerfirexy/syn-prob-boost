@@ -84,14 +84,27 @@ def extract_rules():
         # dump rules_dic
         pickle.dump(rules_dic, open('subrules.txt', 'wb'))
 
-# write rules to db
+# write rules to entropy_ruleFreq table
 def write_rules2db():
     conn = db_conn('swbd')
     cur = conn.cursor()
     # create entropy_ruleFreq table
-    sql = 'CREATE TABLE entropy_ruleFreq ()'
+    sql = 'CREATE TABLE entropy_ruleFreq (ruleID INT, ruleStr LONGTEXT, count INT, PRIMARY KEY(ruleID))'
+    cur.execute(sql)
+    # load the pickled dic
+    dic = pickle.load(open('subrules.txt', 'rb'))
+    # write the key, val pairs to db
+    # before that sort the items of dic by count of sub-rules
+    rule_id = 1
+    for key, val in sorted(dic.items(), key = lambda item: item[1], reverse = True):
+        sql = 'INSERT INTO entropy_ruleFreq VALUES(%s, %s, %s)'
+        cur.execute(sql, (rule_id, key, val))
+        rule_id += 1
+    # commit
+    conn.commit()
 
 
 # main
 if __name__ == '__main__':
-    extract_rules()
+    # extract_rules()
+    write_rules2db()
