@@ -84,6 +84,13 @@ def extract_rules():
         # dump rules_dic
         pickle.dump(rules_dic, open('subrules.txt', 'wb'))
 
+# write rules to db
+def write_rules2db():
+    conn = db_conn('swbd')
+    cur = conn.cursor()
+    # create entropy_ruleFreq table
+    sql = 'CREATE TABLE entropy_ruleFreq ()'
+
 
 # main
 if __name__ == '__main__':
