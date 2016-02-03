@@ -98,7 +98,7 @@ def extract_rules():
 
 # worker func called in extract_rules
 def extract_rules_worker(args):
-    conv_id, g_id, parsed_str, rules_dic, queue = args
+    (conv_id, g_id, parsed_str), rules_dic, queue = args
     # extract rules
     try:
         rules = subrules(parsed_str)
