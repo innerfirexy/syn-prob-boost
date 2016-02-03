@@ -156,6 +156,40 @@ def fixnulls():
             cur.execute(sql, (rules_str, conv_id, g_id))
             conn.commit()
 
+# convert subrule strings to rule IDs and update to subRulesID column in entropy
+def rulestr2id():
+    conn = db_conn('swbd')
+    cur = conn.cursor()
+    # select all ruleIDs from entropy_ruleFreq
+    sql = 'SELECT ruleID, ruleStr, count FROM entropy_ruleFreq'
+    cur.execute(sql)
+    data1 = cur.fetchall()
+    # select data2 from entropy
+    sql = 'SELECT convID, globalID, subRules FROM entropy'
+    cur.execute(sql)
+    data2 = cur.fetchall()
+
+    # initiate pool and manager
+    pool = Pool(multiprocessing.cpu_count())
+    manager = Manager()
+    queue = manager.Queue()
+    # multiprocessing
+    args = [(datum, conn, queue) for datum in data2]
+    result = pool.map_async(rulestr2id_worker, args, chunksize = 5000)
+    # manager loop
+    while True:
+        if result.ready():
+            break
+        else:
+            sys.stdout.write('\r{}/{} converted'.format(queue.qsize(), len(args)))
+            sys.stdout.flush()
+            time.sleep(1)
+
+# worker func for rulestr2id
+def rulestr2id_worker(args):
+    
+    pass
+
 
 # main
 if __name__ == '__main__':
