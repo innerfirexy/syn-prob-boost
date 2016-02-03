@@ -6,9 +6,14 @@
 import MySQLdb
 import sys
 import pickle
+import re
 
 from nltk.tree import *
 from nltk.probability import FreqDist
+
+import multiprocessing
+from multiprocessing import Pool, Manager
+
 
 # get db connection
 def db_conn(db_name):
@@ -34,7 +39,8 @@ def subrules(tree_str, exclude = None):
             raise e
         subtrees = list(tree.subtrees(filter = lambda t: t.height() > 2))
         rules = [str(s.productions()[0]) for s in subtrees]
-        rules = [r.replace(', ', '') for r in rules] # remove the commas in rules
+        # replace all ',' and '.' with blank character
+        rules = [re.sub(r'[,|\.]\s*', '', r) for r in rules]
     else:
         rules = []
     # exclude
@@ -49,40 +55,64 @@ def extract_rules():
     cur = conn.cursor()
 
     # read primary keys
-    sql = 'SELECT convID, globalID FROM entropy'
+    sql = 'SELECT convID, globalID, parsed FROM entropy'
     cur.execute(sql)
-    keys = cur.fetchall()
+    data = cur.fetchall()
 
-    # initiate dic object to store sub-rules and their frequency
-    rules_dic = FreqDist()
+    # initiate dict object to store sub-rules and their frequency
+    # rules_dic = FreqDist()
 
-    # extract sub-rules from each sentence
-    for i, key in enumerate(keys):
-        conv_id, g_id = key
-        sql = 'SELECT parsed FROM entropy WHERE convID = %s AND globalID = %s'
-        cur.execute(sql, (conv_id, g_id))
-        parsed_str = cur.fetchone()[0]
-        # extract rules
-        try:
-            rules = subrules(parsed_str)
-        except Exception as e:
-            print('convID: {}, globalID: {}'.format(conv_id, g_id))
-            raise e
-        # update subRules column
-        if len(rules) > 0:
-            rules_str = '~~~+~~~'.join(rules)
-            sql = 'UPDATE entropy SET subRules = %s WHERE convID = %s AND globalID = %s'
-            cur.execute(sql, (rules_str, conv_id, g_id))
-        # update rules_dic
-        for r in rules:
-            rules_dic[r] += 1
-        # print progress
-        if (i % 99 == 0 and i > 0) or i == len(keys):
-            sys.stdout.write('\r{}/{} updated'.format(i+1, len(keys)))
+    # initiate pool and manager
+    pool = Pool(multiprocessing.cpu_num())
+    manager = Manager()
+    queue = manager.Queue()
+    rules_dic = manager.dict() # to store sub-rules and their frequency count
+
+    # multiprocessing
+    args = [(datum, rules_dic, queue) for datum in data]
+    result = pool.map_async(extract_rules_worker, args)
+
+    # manager loop
+    while True:
+        if result.ready():
+            print('all rows extracted')
+            break
+        else:
+            sys.stdout.write('\r{}/{} extracted'.format(queue.qsize(), len(args)))
+            sys.stdout.flush()
+            time.sleep(1)
+
+    # update result to subRules column
+    for i, res in enumerate(result):
+        conv_id, g_id, rules_str = res
+        sql = 'UPDATE entropy SET subRules = %s WHERE convID = %s AND globalID = %s'
+        cur.execute(sql, (rules_str, conv_id, g_id))
+        if (i % 99 == 0 and i > 0) or i == len(result):
+            sys.stdout.write('\r{}/{} updated'.format(i+1, len(result)))
             sys.stdout.flush()
             conn.commit()
-        # dump rules_dic
-        pickle.dump(rules_dic, open('subrules.txt', 'wb'))
+    # dump rules_dic
+    pickle.dump(rules_dic, open('subrules.txt', 'wb'))
+
+# worker func called in extract_rules
+def extract_rules_worker(args):
+    conv_id, g_id, parsed_str, rules_dic, queue = args
+    # extract rules
+    try:
+        rules = subrules(parsed_str)
+    except Exception as e:
+        print('convID: {}, globalID: {}'.format(conv_id, g_id))
+        raise e
+    # update rules_dic
+    for r in rules:
+        if r in rules_dic:
+            rules_dic[r] += 1
+        else:
+            rules_dic[r] = 0
+    # update queue
+    queue.put(1)
+    # return joined rules_str
+    return (conv_id, g_id, '~~~+~~~'.join(rules))
 
 # write rules to entropy_ruleFreq table
 def write_rules2db():
@@ -106,5 +136,5 @@ def write_rules2db():
 
 # main
 if __name__ == '__main__':
-    # extract_rules()
-    write_rules2db()
+    extract_rules()
+    # write_rules2db()
