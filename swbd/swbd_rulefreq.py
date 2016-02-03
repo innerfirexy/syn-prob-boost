@@ -84,7 +84,8 @@ def extract_rules():
             time.sleep(1)
 
     # update result to subRules column
-    for i, res in enumerate(result):
+    real_results = result.get()
+    for i, res in enumerate(real_results):
         conv_id, g_id, rules_str = res
         sql = 'UPDATE entropy SET subRules = %s WHERE convID = %s AND globalID = %s'
         cur.execute(sql, (rules_str, conv_id, g_id))
