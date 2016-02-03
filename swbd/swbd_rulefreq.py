@@ -199,7 +199,7 @@ def rulestr2id_worker(args):
     try:
         # get id_str
         rules = rules_str.split('~~~+~~~')
-        id_str = ','.join(map(str, dic[r] for r in rules))
+        id_str = ','.join(map(str, [dic[r] for r in rules]))
         # update subRulesID column
         sql = 'UPDATE entropy SET subRulesID = %s WHERE convID = %s AND globalID = %s'
         cur.execute(sql, (id_str, conv_id, g_id))
