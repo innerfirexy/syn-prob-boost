@@ -41,7 +41,7 @@ def subrules(tree_str, exclude = None):
         subtrees = list(tree.subtrees(filter = lambda t: t.height() > 2))
         rules = [str(s.productions()[0]) for s in subtrees]
         # replace all ',' and '.' with blank character
-        rules = [re.sub(r'[,|\.]\s*', '', r) for r in rules]
+        rules = [re.sub(r'[,|\.]\s*', '', r).strip() for r in rules]
     else:
         rules = []
     # exclude
@@ -71,12 +71,12 @@ def extract_rules():
 
     # multiprocessing
     args = [(datum, rules_dic, queue) for datum in data]
-    result = pool.map_async(extract_rules_worker, args, chunksize = 1000)
+    result = pool.map_async(extract_rules_worker, args, chunksize = 5000)
 
     # manager loop
     while True:
         if result.ready():
-            print('all rows extracted')
+            print('\nall rows extracted')
             break
         else:
             sys.stdout.write('\r{}/{} extracted'.format(queue.qsize(), len(args)))
