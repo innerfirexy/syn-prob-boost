@@ -135,8 +135,30 @@ def write_rules2db():
     # commit
     conn.commit()
 
+# fix nulls in entropy table after running extract_rules
+def fixnulls():
+    conn = db_conn('swbd')
+    cur = conn.cursor()
+    # select rows from entropy whose subRules is null
+    sql = 'SELECT convID, globalID, parsed FROM entropy WHERE subRules IS NULL'
+    cur.execute(sql)
+    data = cur.fetchall()
+    # extract all entries in data
+    for conv_id, g_id, parsed_str in data:
+        try:
+            rules = subrules(parsed_str)
+        except Exception as e:
+            raise
+        # update
+        if len(rules) > 0:
+            rules_str = '~~~+~~~'.join(rules)
+            sql = 'UPDATE entropy SET subRules = %s WHERE convID = %s AND globalID = %s'
+            cur.execute(sql, (rules_str, conv_id, g_id))
+            conn.commit()
+
 
 # main
 if __name__ == '__main__':
     # extract_rules()
-    write_rules2db()
+    # write_rules2db()
+    fixnulls()
