@@ -63,7 +63,7 @@ def extract_rules():
     # rules_dic = FreqDist()
 
     # initiate pool and manager
-    pool = Pool(multiprocessing.cpu_num())
+    pool = Pool(multiprocessing.cpu_count())
     manager = Manager()
     queue = manager.Queue()
     rules_dic = manager.dict() # to store sub-rules and their frequency count
