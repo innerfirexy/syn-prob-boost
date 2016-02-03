@@ -120,9 +120,15 @@ def extract_rules_worker(args):
 def write_rules2db():
     conn = db_conn('swbd')
     cur = conn.cursor()
-    # create entropy_ruleFreq table
-    sql = 'CREATE TABLE entropy_ruleFreq (ruleID INT, ruleStr LONGTEXT, count INT, PRIMARY KEY(ruleID))'
-    cur.execute(sql)
+    # check if entropy_ruleFreq table exists, if yes, truncate it, else create it
+    sql = 'SHOW TABLES LIKE %s'
+    cur.execute(sql, ['entropy_ruleFreq'])
+    if cur.fetchone() is None:
+        sql = 'CREATE TABLE entropy_ruleFreq (ruleID INT, ruleStr LONGTEXT, count INT, PRIMARY KEY(ruleID))'
+        cur.execute(sql)
+    else:
+        sql = 'TRUNCATE TABLE entropy_ruleFreq'
+        cur.execute(sql)
     # load the pickled dic
     dic = pickle.load(open('subrules.txt', 'rb'))
     # write the key, val pairs to db
