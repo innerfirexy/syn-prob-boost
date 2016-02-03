@@ -89,7 +89,7 @@ def extract_rules():
         conv_id, g_id, rules_str = res
         sql = 'UPDATE entropy SET subRules = %s WHERE convID = %s AND globalID = %s'
         cur.execute(sql, (rules_str, conv_id, g_id))
-        if (i % 99 == 0 and i > 0) or i == len(real_results):
+        if (i % 99 == 0 and i > 0) or i == len(real_results)-1:
             sys.stdout.write('\r{}/{} updated'.format(i+1, len(real_results)))
             sys.stdout.flush()
             conn.commit()
@@ -211,10 +211,36 @@ def rulestr2id_worker(args):
     # update queue
     queue.put(1)
 
+# recalculate the dict of subrules
+# (necessary because subRules column has been updated in fixnulls)
+def recalc_subrules():
+    conn = db_conn('swbd')
+    cur = conn.cursor()
+    # select all from subRules column
+    sql = 'SELECT subRules FROM entropy'
+    cur.execute(sql)
+    data = cur.fetchall()
+    # initiate a dic
+    dic = FreqDist()
+    # process each entry in data
+    for i, datum in enumerate(data):
+        rules_str = datum[0]
+        rules = rules_str.split('~~~+~~~')
+        for r in rules:
+            dic[r] += 1
+        # print progress
+        if (i % 99 == 0 and i > 0) or i == len(data)-1:
+            sys.stdout.write('\r{}/{} calculated'.format(i+1, len(data)))
+            sys.stdout.flush()
+            time.sleep(1)
+    # dump dic
+    pickle.dump(dic, open('subrules.txt', 'wb'))
+
 
 
 # main
 if __name__ == '__main__':
     # extract_rules()
     # write_rules2db()
-    fixnulls()
+    # fixnulls()
+    recalc_subrules()
