@@ -232,7 +232,6 @@ def recalc_subrules():
         if (i % 99 == 0 and i > 0) or i == len(data)-1:
             sys.stdout.write('\r{}/{} calculated'.format(i+1, len(data)))
             sys.stdout.flush()
-            time.sleep(1)
     # dump dic
     pickle.dump(dic, open('subrules.txt', 'wb'))
 
