@@ -138,5 +138,5 @@ def write_rules2db():
 
 # main
 if __name__ == '__main__':
-    extract_rules()
-    # write_rules2db()
+    # extract_rules()
+    write_rules2db()
