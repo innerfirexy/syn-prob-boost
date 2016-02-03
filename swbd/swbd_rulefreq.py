@@ -160,21 +160,28 @@ def fixnulls():
 def rulestr2id():
     conn = db_conn('swbd')
     cur = conn.cursor()
-    # select all ruleIDs from entropy_ruleFreq
-    sql = 'SELECT ruleID, ruleStr, count FROM entropy_ruleFreq'
-    cur.execute(sql)
-    data1 = cur.fetchall()
-    # select data2 from entropy
-    sql = 'SELECT convID, globalID, subRules FROM entropy'
-    cur.execute(sql)
-    data2 = cur.fetchall()
 
     # initiate pool and manager
     pool = Pool(multiprocessing.cpu_count())
     manager = Manager()
     queue = manager.Queue()
+    dic = manager.dict()
+
+    # select all ruleIDs from entropy_ruleFreq
+    sql = 'SELECT ruleID, ruleStr FROM entropy_ruleFreq'
+    cur.execute(sql)
+    data1 = cur.fetchall()
+    # modify the dic from data1
+    for rule_id, rule_str in data1:
+        dic[rule_str] = rule_id
+
+    # select data2 from entropy
+    sql = 'SELECT convID, globalID, subRules FROM entropy'
+    cur.execute(sql)
+    data2 = cur.fetchall()
+
     # multiprocessing
-    args = [(datum, conn, queue) for datum in data2]
+    args = [(datum, conn, queue, dic) for datum in data2]
     result = pool.map_async(rulestr2id_worker, args, chunksize = 5000)
     # manager loop
     while True:
@@ -187,8 +194,23 @@ def rulestr2id():
 
 # worker func for rulestr2id
 def rulestr2id_worker(args):
-    
-    pass
+    (conv_id, g_id, rules_str), conn, queue, dic = args
+    cur = conn.cursor()
+    try:
+        # get id_str
+        rules = rules_str.split('~~~+~~~')
+        id_str = ','.join(map(str, dic[r] for r in rules))
+        # update subRulesID column
+        sql = 'UPDATE entropy SET subRulesID = %s WHERE convID = %s AND globalID = %s'
+        cur.execute(sql, (id_str, conv_id, g_id))
+        conn.commit()
+    except Exception as e:
+        print('convID: {}, globalID: {}'.format(conv_id, g_id))
+        print('id_str: {}'.format(id_str))
+        raise
+    # update queue
+    queue.put(1)
+
 
 
 # main
