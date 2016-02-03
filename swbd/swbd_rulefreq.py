@@ -94,7 +94,7 @@ def extract_rules():
             sys.stdout.flush()
             conn.commit()
     # dump rules_dic
-    pickle.dump(rules_dic, open('subrules.txt', 'wb'))
+    pickle.dump(rules_dic.copy(), open('subrules.txt', 'wb'))
 
 # worker func called in extract_rules
 def extract_rules_worker(args):
