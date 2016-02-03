@@ -71,7 +71,7 @@ def extract_rules():
 
     # multiprocessing
     args = [(datum, rules_dic, queue) for datum in data]
-    result = pool.map_async(extract_rules_worker, args)
+    result = pool.map_async(extract_rules_worker, args, chunksize = 1000)
 
     # manager loop
     while True:
@@ -89,8 +89,8 @@ def extract_rules():
         conv_id, g_id, rules_str = res
         sql = 'UPDATE entropy SET subRules = %s WHERE convID = %s AND globalID = %s'
         cur.execute(sql, (rules_str, conv_id, g_id))
-        if (i % 99 == 0 and i > 0) or i == len(result):
-            sys.stdout.write('\r{}/{} updated'.format(i+1, len(result)))
+        if (i % 99 == 0 and i > 0) or i == len(real_results):
+            sys.stdout.write('\r{}/{} updated'.format(i+1, len(real_results)))
             sys.stdout.flush()
             conn.commit()
     # dump rules_dic
