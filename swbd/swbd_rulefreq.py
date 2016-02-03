@@ -7,6 +7,7 @@ import MySQLdb
 import sys
 import pickle
 import re
+import time
 
 from nltk.tree import *
 from nltk.probability import FreqDist
