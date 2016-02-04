@@ -186,17 +186,40 @@ def rulestr2id():
     cur.execute(sql)
     data2 = cur.fetchall()
 
-    # multiprocessing
-    args = [(datum, conn, queue, dic) for datum in data2]
-    result = pool.map_async(rulestr2id_worker, args, chunksize = 5000)
-    # manager loop
-    while True:
-        if result.ready():
-            break
-        else:
-            sys.stdout.write('\r{}/{} converted'.format(queue.qsize(), len(args)))
+    # # multiprocessing
+    # args = [(datum, conn, queue, dic) for datum in data2]
+    # result = pool.map_async(rulestr2id_worker, args, chunksize = 5000)
+    # # manager loop
+    # while True:
+    #     if result.ready():
+    #         break
+    #     else:
+    #         sys.stdout.write('\r{}/{} converted'.format(queue.qsize(), len(args)))
+    #         sys.stdout.flush()
+    #         time.sleep(1)
+
+    # process each entry
+    for i, d, in enumerate(data2):
+        conv_id, g_id, rules_str = d
+        rules = rules_str.split('~~~+~~~')
+        id_str = ','.join(map(str, [dic[r] for r in rules]))
+        # update subRulesID column
+        sql = 'UPDATE entropy SET subRulesID = %s WHERE convID = %s AND globalID = %s'
+        try:
+            cur.execute(sql, (id_str, conv_id, g_id))
+        except Exception as e:
+            print('convID: {}, globalID: {}'.format(conv_id, g_id))
+            print('id_str: {}'.format(id_str))
+            raise e
+        # print progress
+        if (i % 99 == 0 and i > 0) or i == len(data2)-1:
+            sys.stdout.write('\r{}/{} updated'.format(i+1, len(data2)))
             sys.stdout.flush()
-            time.sleep(1)
+    # commit
+    conn.commit()
+
+
+
 
 # worker func for rulestr2id
 def rulestr2id_worker(args):
