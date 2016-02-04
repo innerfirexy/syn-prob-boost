@@ -154,7 +154,7 @@ def fixnulls():
         try:
             rules = subrules(parsed_str)
         except Exception as e:
-            raise
+            raise e
         # update
         if len(rules) > 0:
             rules_str = '~~~+~~~'.join(rules)
@@ -213,7 +213,7 @@ def rulestr2id_worker(args):
     except Exception as e:
         print('convID: {}, globalID: {}'.format(conv_id, g_id))
         print('id_str: {}'.format(id_str))
-        raise
+        raise e
     # update queue
     queue.put(1)
 
