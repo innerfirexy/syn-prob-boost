@@ -246,6 +246,6 @@ def recalc_subrules():
 # main
 if __name__ == '__main__':
     # extract_rules()
-    # write_rules2db()
+    write_rules2db()
     # fixnulls()
-    recalc_subrules()
+    # recalc_subrules()
