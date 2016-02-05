@@ -39,8 +39,8 @@ dt.ext = data.table(df.ext)
 setkey(dt.ext, convID, primeTurnID, targetTurnID)
 
 # define high and low freq ruleIDs
-rule_ids_high = df.rf[1:27,]$ruleID
-rule_ids_low = df.rf[28:100,]$ruleID
+rule_ids_high = df.rf[1:104,]$ruleID
+rule_ids_low = df.rf[105:266,]$ruleID
 
 # compute probBoost for distance from 1 to 10, and for each type (self, other)
 system.time(pb_other_hi1 <- ruleProbBoost(subset(dt.ext, type == 'other' & distance == 1), dt.db.agg, rule_ids_high)) # takes 9.5 sec
