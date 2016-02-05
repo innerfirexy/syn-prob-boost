@@ -67,19 +67,23 @@ pb_self_lo8 <- ruleProbBoost(subset(df.ext, type == 'self' & distance == 8), dt.
 pb_self_lo10 <- ruleProbBoost(subset(df.ext, type == 'self' & distance == 10), dt.db.agg, rule_ids_low)
 
 # construct df.plot
-df.plot = data.frame(probBoost = c(pb_other_hi1, pb_other_hi3, pb_other_hi5, pb_other_hi7, pb_other_hi9, 
-    pb_other_lo1, pb_other_lo3, pb_other_lo5, pb_other_lo7, pb_other_lo9, 
-    pb_self_hi2, pb_self_hi4, pb_self_hi6, pb_self_hi8, pb_self_hi10, 
-    pb_self_lo2, pb_self_lo4, pb_self_lo6, pb_self_lo8, pb_self_lo10), 
-    distance = c(rep(rep(c(1,3,5,7,9), each = length(rule_ids_high)), 2), 
-                rep(rep(c(2,4,6,8,10), each = length(rule_ids_low)), 2)), 
-    freq = rep(c(rep('high', 5*length(rule_ids_high)), rep('low', 5*length(rule_ids_low))), 2), 
-    type = c(rep('other', 5*length(rule_ids_high) + 5*length(rule_ids_low)), 
+df.plot = data.frame(probBoost = c(pb_other_hi1, pb_other_hi3, pb_other_hi5, pb_other_hi7, pb_other_hi9,
+    pb_other_lo1, pb_other_lo3, pb_other_lo5, pb_other_lo7, pb_other_lo9,
+    pb_self_hi2, pb_self_hi4, pb_self_hi6, pb_self_hi8, pb_self_hi10,
+    pb_self_lo2, pb_self_lo4, pb_self_lo6, pb_self_lo8, pb_self_lo10),
+    distance = c(rep(c(1,3,5,7,9), each = length(rule_ids_high)),
+                rep(c(1,3,5,7,9), each = length(rule_ids_low)),
+                rep(c(2,4,6,8,10), each = length(rule_ids_high)),
+                rep(c(2,4,6,8,10), each = length(rule_ids_low))),
+    freq = rep(c(rep('high', 5*length(rule_ids_high)), rep('low', 5*length(rule_ids_low))), 2),
+    type = c(rep('other', 5*length(rule_ids_high) + 5*length(rule_ids_low)),
             rep('self', 5*length(rule_ids_high) + 5*length(rule_ids_low)))
 )
 
 # remove infinite values
-df.plot[is.infinite(df.plot$probBoost),]$probBoost = NA
+if (nrow(subset(df.plot, is.infinite(probBoost))) > 0) {
+    df.plot[is.infinite(df.plot$probBoost),]$probBoost = NA
+}
 
 # save df.plot to rds
 saveRDS(df.plot, 'df.plot.rds')
@@ -88,8 +92,8 @@ saveRDS(df.plot, 'df.plot.rds')
 df.plot = readRDS('df.plot.rds')
 
 # plot
-p = ggplot(df.plot, aes(x = distance, y = probBoost, color = freq, lty = type)) + 
-    stat_summary(fun.data = mean_cl_boot, geom = 'errorbar') + 
+p = ggplot(df.plot, aes(x = distance, y = probBoost, color = freq, lty = type)) +
+    stat_summary(fun.data = mean_cl_boot, geom = 'errorbar') +
     stat_summary(fun.y = mean, geom = 'line')
 pdf('probBoost.other_vs_self.high_vs_low.pdf')
 plot(p)
