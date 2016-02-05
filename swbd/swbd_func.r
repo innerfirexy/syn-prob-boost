@@ -7,8 +7,8 @@ library(foreach)
 library(doMC)
 
 # func used in aggregating
-dbRulesAgg = function(dt) {
-    s = paste(dt$subRulesID, sep = ',')
+dbRulesAgg = function(str) {
+    s = paste(str, sep = ',')
     paste(as.character(unique(as.vector(unlist(strsplit(s, split = ','))))), collapse = ',')
 }
 
@@ -17,7 +17,7 @@ dbRulesAgg = function(dt) {
 addInLabel = function(df.pairs, dt.db.agg, rule_id) {
     # setkey
     dt.pairs = data.table(df.pairs)
-    setkey(dt.pairs, xmlID, divIndex, primeTurnID, targetTurnID)
+    setkey(dt.pairs, convID, primeTurnID, targetTurnID)
 
     # add the isRuleIn label to dt.db.agg, indicating whether the rule_id is in a turn (a row in dt.db.agg)
 
@@ -34,19 +34,19 @@ addInLabel = function(df.pairs, dt.db.agg, rule_id) {
             list(xmlID = xmlID, divIndex = divIndex, turnID = turnID, label = r %in% rs)
         }, by = 1:nrow(dt.db.agg)]
     dt.db.agg[, nrow:=NULL]
-    setkey(dt.db.agg, xmlID, divIndex, turnID)
+    setkey(dt.db.agg, convID, turnID)
 
     # merge dt.db.agg.labeled to dt.pairs sequentially
-    prime_turns = dt.pairs[, list(xmlID, divIndex, primeTurnID)]
+    prime_turns = dt.pairs[, list(convID, primeTurnID)]
     prime_turns = rename(prime_turns, turnID = primeTurnID)
-    setkey(prime_turns, xmlID, divIndex, turnID)
+    setkey(prime_turns, convID, turnID)
 
-    target_turns = dt.pairs[, list(xmlID, divIndex, targetTurnID)]
+    target_turns = dt.pairs[, list(convID, targetTurnID)]
     target_turns = rename(target_turns, turnID = targetTurnID)
-    setkey(target_turns, xmlID, divIndex, turnID)
+    setkey(target_turns, convID, turnID)
 
     unique_turns = unique(rbindlist(list(prime_turns, target_turns)))
-    setkey(unique_turns, xmlID, divIndex, turnID)
+    setkey(unique_turns, convID, turnID)
 
     # merge from dt.db.agg to unique_turns
     unique_turns = merge(unique_turns, dt.db.agg)
@@ -56,10 +56,10 @@ addInLabel = function(df.pairs, dt.db.agg, rule_id) {
     dt.pairs = merge(dt.pairs, unique_turns)
     dt.pairs = rename(dt.pairs, inPrime = label)
 
-    setkey(dt.pairs, xmlID, divIndex, targetTurnID)
+    setkey(dt.pairs, convID, targetTurnID)
     unique_turns = rename(unique_turns, targetTurnID = primeTurnID)
     dt.pairs = merge(dt.pairs, unique_turns)
     dt.pairs = rename(dt.pairs, inTarget = label)
-
+    # return
     dt.pairs
 }
