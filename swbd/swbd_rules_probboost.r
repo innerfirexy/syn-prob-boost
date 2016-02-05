@@ -67,7 +67,7 @@ pb_self_lo6 <- ruleProbBoost(subset(dt.ext, type == 'self' & distance == 6), dt.
 pb_self_lo8 <- ruleProbBoost(subset(dt.ext, type == 'self' & distance == 8), dt.db.agg, rule_ids_low)
 pb_self_lo10 <- ruleProbBoost(subset(dt.ext, type == 'self' & distance == 10), dt.db.agg, rule_ids_low)
 
-# the whole computation takes 626 sec on brain
+# the whole computation takes 1586 sec on brain
 
 # construct df.plot
 df.plot = data.frame(probBoost = c(pb_other_hi1, pb_other_hi3, pb_other_hi5, pb_other_hi7, pb_other_hi9,
